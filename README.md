@@ -1,5 +1,8 @@
 # PrehrajTo 🎬
 
+[![Uptime Status](https://img.shields.io/uptimerobot/status/m801943371-78c6e4351b1a34cc26858090?label=Azure%20App&style=flat-square)](https://stats.uptimerobot.com/ueMqtXp5wJ)
+[![Uptime Status](https://img.shields.io/uptimerobot/status/m801943405-1df9c48a5d475447d1d9b7af?label=TinyURL&style=flat-square)](https://stats.uptimerobot.com/ueMqtXp5wJ)
+
 Proxy pro přehrávání videí z Prehraj.to z libovolné lokace.
 
 ## Architektura
