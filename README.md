@@ -79,7 +79,7 @@ Upload `index.php` na český hosting přes FTP.
 
 ❤️
 
-**Mamince a Leničce věnuje Jiříček a jeho virtuální asistent**
+**Mamince a Leničce věnuje Jiřík a jeho virtuální asistent**
 
 *V Olbramovicích dne 6. prosince 2025*
 
