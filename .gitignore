@@ -1,0 +1,30 @@
+# .NET
+bin/
+obj/
+publish/
+*.dll
+*.pdb
+*.exe
+
+# IDE
+.vs/
+.vscode/
+*.user
+*.suo
+
+# Build artifacts
+deploy.zip
+*.zip
+
+# Credentials (never commit!)
+*credentials*.txt
+*password*.txt
+*.key
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
