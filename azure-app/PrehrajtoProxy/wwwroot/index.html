@@ -369,6 +369,9 @@
                 return;
             }
             
+            // Stop any playing video before searching
+            stopVideo();
+            
             // Update URL with search query
             const newUrl = `${window.location.pathname}?q=${encodeURIComponent(query)}`;
             window.history.pushState({}, '', newUrl);
