@@ -15,13 +15,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
-// Determine action: search, stream, or get video
+// Determine action: search, stream, validate or get video
 $action = isset($_GET['action']) ? $_GET['action'] : 'video';
 
 if ($action === 'search') {
     handleSearch();
 } elseif ($action === 'stream') {
     handleStream();
+} elseif ($action === 'validate') {
+    handleValidate();
 } else {
     handleVideo();
 }
@@ -219,6 +221,93 @@ function handleStream() {
     
     curl_exec($ch);
     curl_close($ch);
+    exit;
+}
+
+/**
+ * Handle video validation - check if video URL works (HEAD request)
+ * Returns: { "valid": true/false, "status": httpCode }
+ */
+function handleValidate() {
+    $url = isset($_GET['url']) ? $_GET['url'] : '';
+    
+    if (empty($url)) {
+        echo json_encode([
+            'valid' => false,
+            'error' => 'Missing url parameter'
+        ]);
+        exit;
+    }
+    
+    // First get video URL from prehraj.to page
+    if (strpos($url, 'prehraj.to') !== false) {
+        // Fetch the page and extract video URL
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+        
+        $html = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        
+        if ($httpCode !== 200 || empty($html)) {
+            echo json_encode([
+                'valid' => false,
+                'status' => $httpCode,
+                'error' => 'Cannot fetch prehraj.to page'
+            ]);
+            exit;
+        }
+        
+        // Extract video URL
+        $videoUrl = null;
+        $patterns = [
+            '/["\']?(https?:\/\/[^"\']*premiumcdn\.net[^"\']*\.m3u8[^"\']*)["\']?/i',
+            '/["\']?(https?:\/\/[^"\']*premiumcdn\.net[^"\']*\.mp4[^"\']*)["\']?/i',
+        ];
+        
+        foreach ($patterns as $pattern) {
+            if (preg_match($pattern, $html, $matches)) {
+                $videoUrl = str_replace('\/', '/', $matches[1]);
+                break;
+            }
+        }
+        
+        if (!$videoUrl) {
+            echo json_encode([
+                'valid' => false,
+                'error' => 'Video URL not found in page'
+            ]);
+            exit;
+        }
+        
+        $url = $videoUrl;
+    }
+    
+    // Now do HEAD request to check if video URL works
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_NOBODY, true); // HEAD request
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+    curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+    
+    curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    
+    $valid = ($httpCode >= 200 && $httpCode < 400);
+    
+    echo json_encode([
+        'valid' => $valid,
+        'status' => $httpCode
+    ]);
     exit;
 }
 

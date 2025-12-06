@@ -65,4 +65,29 @@ app.MapGet("/api/proxy", async (string url, IHttpClientFactory httpClientFactory
     }
 });
 
+// API endpoint for validating if video is available
+app.MapGet("/api/validate", async (string url, IHttpClientFactory httpClientFactory) =>
+{
+    if (string.IsNullOrEmpty(url))
+    {
+        return Results.Json(new { valid = false, error = "Missing url parameter" });
+    }
+
+    try
+    {
+        var client = httpClientFactory.CreateClient();
+        client.Timeout = TimeSpan.FromSeconds(15);
+        
+        // Call the Czech proxy to validate video
+        var proxyUrl = $"http://tumarsrobot.unas.cz/index.php?action=validate&url={Uri.EscapeDataString(url)}";
+        var response = await client.GetStringAsync(proxyUrl);
+        
+        return Results.Content(response, "application/json");
+    }
+    catch (Exception ex)
+    {
+        return Results.Json(new { valid = false, error = ex.Message });
+    }
+});
+
 app.Run();

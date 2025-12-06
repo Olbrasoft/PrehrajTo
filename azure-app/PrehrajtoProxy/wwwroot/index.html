@@ -402,12 +402,16 @@
         }
         
         function displayResults(movies, query) {
-            resultsInfo.textContent = `Nalezeno ${movies.length} výsledků pro "${query}"`;
+            resultsInfo.textContent = `Nalezeno ${movies.length} výsledků pro "${query}" (ověřuji dostupnost...)`;
             resultsGrid.innerHTML = '';
+            
+            // Store card elements by index for later removal
+            const cardElements = [];
             
             movies.forEach((movie, index) => {
                 const card = document.createElement('a');
                 card.className = 'movie-card';
+                card.dataset.index = index;
                 card.href = `?watch=${encodeURIComponent(movie.url)}&title=${encodeURIComponent(movie.title)}`;
                 // Allow middle-click / ctrl+click to open in new tab
                 card.onclick = (e) => {
@@ -428,9 +432,65 @@
                 `;
                 
                 resultsGrid.appendChild(card);
+                cardElements[index] = card;
             });
             
             showSection('results');
+            
+            // Validate videos in background and remove invalid ones
+            validateMoviesInBackground(movies, query, cardElements);
+        }
+        
+        async function validateMoviesInBackground(movies, query, cardElements) {
+            let validCount = movies.length;
+            let checkedCount = 0;
+            
+            // Validate in parallel, but limit concurrency
+            const concurrency = 5;
+            const chunks = [];
+            for (let i = 0; i < movies.length; i += concurrency) {
+                chunks.push(movies.slice(i, i + concurrency).map((m, idx) => ({ movie: m, index: i + idx })));
+            }
+            
+            for (const chunk of chunks) {
+                await Promise.all(chunk.map(async ({ movie, index }) => {
+                    try {
+                        const response = await fetch(`/api/validate?url=${encodeURIComponent(movie.url)}`);
+                        const data = await response.json();
+                        
+                        checkedCount++;
+                        
+                        if (!data.valid) {
+                            // Remove invalid video from display
+                            const card = cardElements[index];
+                            if (card && card.parentNode) {
+                                card.remove();
+                                validCount--;
+                                
+                                // Also remove from currentResults
+                                const resultIndex = currentResults.findIndex(m => m.url === movie.url);
+                                if (resultIndex > -1) {
+                                    currentResults.splice(resultIndex, 1);
+                                }
+                            }
+                        }
+                        
+                        // Update info text
+                        resultsInfo.textContent = `Nalezeno ${validCount} funkčních výsledků pro "${query}" (ověřeno ${checkedCount}/${movies.length})`;
+                        
+                    } catch (err) {
+                        console.error('Validation error:', err);
+                        checkedCount++;
+                    }
+                }));
+            }
+            
+            // Final update
+            resultsInfo.textContent = `Nalezeno ${validCount} funkčních výsledků pro "${query}"`;
+            
+            if (validCount === 0) {
+                showStatus(`❌ Žádné funkční video nenalezeno pro "${query}"`, 'error');
+            }
         }
         
         async function playVideoDirectly(prehrajtoUrl, title) {
