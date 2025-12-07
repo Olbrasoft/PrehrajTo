@@ -414,13 +414,13 @@
             movies.forEach((movie, index) => {
                 const card = document.createElement('a');
                 card.className = 'movie-card';
-                card.dataset.index = index;
+                card.dataset.url = movie.url;
                 card.href = `?watch=${encodeURIComponent(movie.url)}&title=${encodeURIComponent(movie.title)}`;
                 // Allow middle-click / ctrl+click to open in new tab
                 card.onclick = (e) => {
                     if (!e.ctrlKey && !e.metaKey && e.button === 0) {
                         e.preventDefault();
-                        playMovie(index);
+                        playMovieByUrl(movie.url);
                     }
                 };
                 
@@ -523,25 +523,30 @@
             }
         }
         
-        async function playMovie(index) {
-            const movie = currentResults[index];
-            
+        async function playMovieByUrl(url) {
+            const movie = currentResults.find(m => m.url === url);
+
+            if (!movie) {
+                showStatus('❌ Video nenalezeno v aktuálních výsledcích', 'error');
+                return;
+            }
+
             // Update URL to video page
             const newUrl = `?watch=${encodeURIComponent(movie.url)}&title=${encodeURIComponent(movie.title)}`;
             window.history.pushState({}, '', newUrl);
-            
+
             showStatus('🔄 Načítám video...', 'loading');
-            
+
             try {
                 const response = await fetch(`/api/proxy?url=${encodeURIComponent(movie.url)}`);
                 const data = await response.json();
-                
+
                 if (data.success && data.videoUrl) {
                     hideStatus();
                     nowPlaying.textContent = movie.title;
                     videoPlayer.src = data.videoUrl;
                     showSection('player');
-                    
+
                     try {
                         await videoPlayer.play();
                     } catch (playError) {
