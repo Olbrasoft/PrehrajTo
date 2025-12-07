@@ -288,20 +288,23 @@ function handleValidate() {
         $url = $videoUrl;
     }
     
-    // Now do HEAD request to check if video URL works
+    // Do partial GET request instead of HEAD (HLS streams don't respond to HEAD)
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $url);
-    curl_setopt($ch, CURLOPT_NOBODY, true); // HEAD request
+    curl_setopt($ch, CURLOPT_NOBODY, false);  // GET instead of HEAD
+    curl_setopt($ch, CURLOPT_RANGE, '0-1024'); // Only first 1KB
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
     curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+    curl_setopt($ch, CURLOPT_REFERER, 'https://prehraj.to/');  // Required by some CDNs
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-    
-    curl_exec($ch);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 20);  // Increased from 10
+
+    $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
-    
+
+    // 206 = Partial Content (success for Range request), 200 = OK
     $valid = ($httpCode >= 200 && $httpCode < 400);
     
     echo json_encode([
